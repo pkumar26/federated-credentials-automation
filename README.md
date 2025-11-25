@@ -6,9 +6,18 @@ This script automates the creation of Azure AD federated credentials for GitHub 
 
 The script creates federated credentials that allow GitHub Actions to authenticate with Azure using OpenID Connect (OIDC), eliminating the need for storing Azure secrets in GitHub.
 
+### Why This Works
+
+- **One-time setup:** Scripts handle the bulk creation of credentials
+- **No manual maintenance:** Adding a new repo = run script once
+- **Centralized control:** Manage 3 service principals instead of hundreds
+- **GitHub environments provide security:** Protection rules, approvals, deployment gates
+- **Org-level secrets:** No need to configure secrets per repo
+
 ## Prerequisites
 
 - Azure CLI (`az`) installed and authenticated
+- GitHub CLI (`gh`) installed and authenticated - if using `setup_creds_dynamic.sh`
 - Appropriate permissions to create Service Principals and federated credentials in Azure AD
 - GitHub organization with repositories
 - Azure subscription ID
@@ -123,6 +132,8 @@ In each repository, create the environments:
 - Go to repository **Settings** → **Environments**
 - Create: `dev`, `staging`, `production`
 
+**Note:** This step can be automated using the GitHub CLI or API. A reference script (`create_repo_env.sh`) for automating environment creation is provided in the repository.
+
 ### 2. Add GitHub Secrets
 
 Add the following secrets at the **organization level** or **repository level**:
@@ -194,6 +205,52 @@ az account show
 3. **Enable environment protection rules** in GitHub (required reviewers, wait timers)
 4. **Audit federated credentials** regularly
 5. **Use environment-specific secrets** to prevent production access from non-production workflows
+
+## Adding a New Repository
+
+If you need to add credentials for a new repository without re-running the entire script, you can use this quick command:
+
+```bash
+# Configuration
+ORG_NAME="your-org-name"
+REPO_NAME="new-repo"
+
+# Service Principal Object IDs
+declare -A SP_OBJECT_IDS
+SP_OBJECT_IDS["dev"]="your-dev-sp-object-id"
+SP_OBJECT_IDS["staging"]="your-staging-sp-object-id"
+SP_OBJECT_IDS["production"]="your-prod-sp-object-id"
+
+# Create credentials for all environments
+for env in dev staging production; do
+    SUBJECT="repo:${ORG_NAME}/${REPO_NAME}:environment:${env}"
+    DISPLAY_NAME="${REPO_NAME}-${env}"
+    SP_OBJECT_ID="${SP_OBJECT_IDS[$env]}"
+    
+    echo "Creating credential: $DISPLAY_NAME"
+    
+    az ad app federated-credential create \
+        --id "$SP_OBJECT_ID" \
+        --parameters "{
+            \"name\": \"${DISPLAY_NAME}\",
+            \"issuer\": \"https://token.actions.githubusercontent.com\",
+            \"subject\": \"${SUBJECT}\",
+            \"audiences\": [\"api://AzureADTokenExchange\"],
+            \"description\": \"GitHub Actions for ${REPO_NAME} ${env} environment\"
+        }"
+    
+    if [ $? -eq 0 ]; then
+        echo "✓ Created: $DISPLAY_NAME"
+    else
+        echo "✗ Failed to create: $DISPLAY_NAME" >&2
+    fi
+done
+```
+
+**Don't forget to:**
+1. Update `ORG_NAME` and `REPO_NAME`
+2. Update the Service Principal Object IDs
+3. Create the corresponding GitHub environments in the new repository
 
 ## Cleaning Up
 
