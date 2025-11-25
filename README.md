@@ -239,7 +239,11 @@ for env in dev staging production; do
             \"description\": \"GitHub Actions for ${REPO_NAME} ${env} environment\"
         }"
     
-    echo "✓ Created: $DISPLAY_NAME"
+    if [ $? -eq 0 ]; then
+        echo "✓ Created: $DISPLAY_NAME"
+    else
+        echo "✗ Failed to create: $DISPLAY_NAME" >&2
+    fi
 done
 ```
 
