@@ -17,7 +17,7 @@ The script creates federated credentials that allow GitHub Actions to authentica
 ## Prerequisites
 
 - Azure CLI (`az`) installed and authenticated
-- GitHub CLI (`gh`) installed and authenticated - if using *dynamic script
+- GitHub CLI (`gh`) installed and authenticated - if using `setup_creds_dynamic.sh`
 - Appropriate permissions to create Service Principals and federated credentials in Azure AD
 - GitHub organization with repositories
 - Azure subscription ID
