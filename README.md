@@ -132,7 +132,7 @@ In each repository, create the environments:
 - Go to repository **Settings** → **Environments**
 - Create: `dev`, `staging`, `production`
 
-**Note:** This step can be automated using the GitHub CLI or API. A reference script for automating environment creation is provided in the repository.
+**Note:** This step can be automated using the GitHub CLI or API. A reference script (`create_repo_env.sh`) for automating environment creation is provided in the repository.
 
 ### 2. Add GitHub Secrets
 
