@@ -1,10 +1,10 @@
-# Azure Federated Credentials Setup Script
+# Azure Federated Credentials Automation
 
-This script automates the creation of Azure AD federated credentials for GitHub Actions workflows across multiple repositories and environments.
+This repository provides a set of scripts and templates to automate the creation of Azure AD federated credentials for GitHub Actions workflows across multiple repositories and environments.
 
 ## Overview
 
-The script creates federated credentials that allow GitHub Actions to authenticate with Azure using OpenID Connect (OIDC), eliminating the need for storing Azure secrets in GitHub.
+The scripts create federated credentials that allow GitHub Actions to authenticate with Azure using OpenID Connect (OIDC), eliminating the need for storing Azure secrets in GitHub.
 
 ### Why This Works
 
@@ -14,10 +14,19 @@ The script creates federated credentials that allow GitHub Actions to authentica
 - **GitHub environments provide security:** Protection rules, approvals, deployment gates
 - **Org-level secrets:** No need to configure secrets per repo
 
+## Repository Structure
+
+| File | Description |
+|------|-------------|
+| `setup_creds.sh` | Creates federated credentials using a **hardcoded** list of repositories |
+| `setup_creds_dynamic.sh` | Creates federated credentials by **dynamically fetching** all repos from a GitHub org (requires `gh` CLI) |
+| `create_repo_env.sh` | Creates GitHub environments (dev, staging, production) in each repo (requires `gh` CLI) |
+| `workflow_template.yml` | Ready-to-use GitHub Actions workflow template with `workflow_dispatch` and environment-to-credential mapping |
+
 ## Prerequisites
 
 - Azure CLI (`az`) installed and authenticated
-- GitHub CLI (`gh`) installed and authenticated - if using `setup_creds_dynamic.sh`
+- GitHub CLI (`gh`) installed and authenticated — required by `setup_creds_dynamic.sh` and `create_repo_env.sh`
 - Appropriate permissions to create Service Principals and federated credentials in Azure AD
 - GitHub organization with repositories
 - Azure subscription ID
@@ -83,7 +92,7 @@ Get the Object IDs for your Service Principals:
 az ad sp show --id <client-id> --query id -o tsv
 ```
 
-### 4. Repository List
+### 4. Repository List (setup_creds.sh only)
 
 ```bash
 REPOS=(
@@ -93,23 +102,31 @@ REPOS=(
     "repo4"
 )
 ```
-Add all repository names (without the org prefix) that you want to configure.
+Add all repository names (without the org prefix) that you want to configure. If you prefer to fetch repos automatically, use `setup_creds_dynamic.sh` instead.
 
 ## Usage
 
-1. **Make the script executable:**
-   ```bash
-   chmod +x script.sh
-   ```
+### Option A: Manual repo list (`setup_creds.sh`)
 
-2. **Run the script:**
-   ```bash
-   ./script.sh
-   ```
+Use this when you want to target a specific set of repositories.
+
+```bash
+chmod +x setup_creds.sh
+./setup_creds.sh
+```
+
+### Option B: Dynamic repo discovery (`setup_creds_dynamic.sh`)
+
+Use this to automatically create credentials for **all** repositories in your GitHub organization. Requires `gh` CLI.
+
+```bash
+chmod +x setup_creds_dynamic.sh
+./setup_creds_dynamic.sh
+```
 
 ## What the Script Does
 
-1. Iterates through each repository in the `REPOS` array
+1. Iterates through each repository (from the hardcoded list or fetched dynamically)
 2. For each repository, creates federated credentials for each environment
 3. Configures the credentials with:
    - **Issuer:** `https://token.actions.githubusercontent.com`
@@ -132,7 +149,15 @@ In each repository, create the environments:
 - Go to repository **Settings** → **Environments**
 - Create: `dev`, `staging`, `production`
 
-**Note:** This step can be automated using the GitHub CLI or API. A reference script (`create_repo_env.sh`) for automating environment creation is provided in the repository.
+**Automated option:** Use the provided `create_repo_env.sh` script to create environments across all repos in your org:
+
+```bash
+chmod +x create_repo_env.sh
+# Edit ORG_NAME in the script, then run:
+./create_repo_env.sh
+```
+
+This script requires `gh` CLI. It also adds protection rules (reviewer requirement) for the `production` environment — edit the `YOUR_USER_ID` placeholder in the script to set the reviewer.
 
 ### 2. Add GitHub Secrets
 
@@ -141,14 +166,25 @@ Add the following secrets at the **organization level** or **repository level**:
 ```
 AZURE_CLIENT_ID_DEV=<dev-sp-client-id>
 AZURE_CLIENT_ID_STAGING=<staging-sp-client-id>
-AZURE_CLIENT_ID_PRODUCTION=<prod-sp-client-id>
+AZURE_CLIENT_ID_PROD=<prod-sp-client-id>
 AZURE_TENANT_ID=<your-tenant-id>
 AZURE_SUBSCRIPTION_ID=<your-subscription-id>
 ```
 
 ### 3. Use in GitHub Actions Workflow
 
-Example workflow file (`.github/workflows/deploy.yml`):
+A complete workflow template is provided in `workflow_template.yml`. It includes:
+- Push-triggered deploys to dev
+- Manual `workflow_dispatch` with environment selection
+- Automatic mapping of environment to the correct client ID secret
+
+Copy it into your repositories:
+
+```bash
+cp workflow_template.yml <your-repo>/.github/workflows/deploy.yml
+```
+
+Or use the simplified example below as a starting point:
 
 ```yaml
 name: Deploy to Azure
