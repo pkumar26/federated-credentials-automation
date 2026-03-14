@@ -48,7 +48,7 @@ jobs:
           esac
       
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ steps.vars.outputs.client_id }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
