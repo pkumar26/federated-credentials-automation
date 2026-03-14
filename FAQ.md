@@ -31,9 +31,9 @@ gh auth status
 
 ## Security Best Practices
 
-1. **Use separate Service Principals** for each environment
+1. **Use separate identities per environment** — one Service Principal or Managed Identity per environment (dev, staging, production)
 2. **Apply least-privilege access** — grant only necessary permissions
-3. **Scope SPs to resource groups** rather than the full subscription (see [SETUP.md — Step 1](SETUP.md#step-1-create-service-principals))
+3. **Scope identities to resource groups** rather than the full subscription (see [SETUP.md — Step 1](SETUP.md#step-1-create-identities))
 4. **Enable environment protection rules** in GitHub (required reviewers, wait timers)
 5. **Audit federated credentials** regularly
 6. **Use environment-specific secrets** to prevent production access from non-production workflows
@@ -50,21 +50,30 @@ gh auth status
 
 2. Create GitHub environments in the new repo (manually or via `create_repo_env.sh`).
 
-3. If using resource-group scoping, grant the SP access to the new app's resource group:
+3. If using resource-group scoping, grant the identity access to the new app's resource group:
    ```bash
+   # Service Principal
    az role assignment create --assignee <sp-client-id> \
      --role contributor \
      --scope /subscriptions/{subscription-id}/resourceGroups/{new-app-rg}
+
+   # Managed Identity
+   PRINCIPAL_ID=$(az identity show --name <identity-name> --resource-group <infra-rg> --query principalId -o tsv)
+   az role assignment create --assignee "$PRINCIPAL_ID" \
+     --role contributor \
+     --scope /subscriptions/{subscription-id}/resourceGroups/{new-app-rg}
    ```
-   Repeat for each environment's SP as needed.
+   Repeat for each environment's identity as needed.
 
 ---
 
 ## Removing a Repository
 
-When decommissioning a repo, clean up its federated credentials from each SP:
+When decommissioning a repo, clean up its federated credentials:
 
-1. **List** existing credentials to find the ones to remove:
+### Service Principal
+
+1. **List** existing credentials:
    ```bash
    az ad app federated-credential list --id <sp-object-id> --query "[].{name:name, subject:subject}" -o table
    ```
@@ -75,9 +84,24 @@ When decommissioning a repo, clean up its federated credentials from each SP:
    ```
    Repeat for each environment's SP (dev, staging, production).
 
-3. If using resource-group scoping and the resource group is also being removed, delete the role assignment:
+### Managed Identity
+
+1. **List** existing credentials:
    ```bash
-   az role assignment delete --assignee <sp-client-id> \
-     --role contributor \
-     --scope /subscriptions/{subscription-id}/resourceGroups/{old-app-rg}
+   az identity federated-credential list --identity-name <identity-name> --resource-group <infra-rg> --query "[].{name:name, subject:subject}" -o table
    ```
+
+2. **Delete** the credentials for the decommissioned repo:
+   ```bash
+   az identity federated-credential delete --identity-name <identity-name> --resource-group <infra-rg> --name <credential-name>
+   ```
+   Repeat for each environment's identity.
+
+### Cleanup role assignments
+
+If using resource-group scoping and the resource group is also being removed:
+```bash
+az role assignment delete --assignee <client-or-principal-id> \
+  --role contributor \
+  --scope /subscriptions/{subscription-id}/resourceGroups/{old-app-rg}
+```

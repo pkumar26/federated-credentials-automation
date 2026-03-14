@@ -7,11 +7,21 @@ set -euo pipefail
 ORG_NAME="your-org-name"
 ENVIRONMENTS=("dev" "staging" "production")
 
-# Service Principal Object IDs (get these from Azure Portal or az ad sp show)
+# ── Option A: Service Principal (default) ─────
+# Get Object IDs via: az ad sp show --id <client-id> --query id -o tsv
 declare -A SP_OBJECT_IDS
 SP_OBJECT_IDS["dev"]="your-dev-sp-object-id"
 SP_OBJECT_IDS["staging"]="your-staging-sp-object-id"
 SP_OBJECT_IDS["production"]="your-prod-sp-object-id"
+
+# ── Option B: Managed Identity (--managed-identity) ──
+# Resource group where managed identities are created
+MI_RESOURCE_GROUP="your-infra-rg"
+# Identity names per environment
+declare -A MI_NAMES
+MI_NAMES["dev"]="github-actions-dev"
+MI_NAMES["staging"]="github-actions-staging"
+MI_NAMES["production"]="github-actions-prod"
 
 # Manual list of repositories (used when --dynamic is not passed)
 # Add your repository names here (one per line)
@@ -26,9 +36,11 @@ REPOS=(
 # Parse flags
 # ──────────────────────────────────────────────
 DYNAMIC=false
+USE_MI=false
 for arg in "$@"; do
     case "$arg" in
         --dynamic) DYNAMIC=true ;;
+        --managed-identity) USE_MI=true ;;
         *) echo "Unknown option: $arg"; exit 1 ;;
     esac
 done
@@ -51,12 +63,27 @@ if [[ "$ORG_NAME" == "your-org-name" ]]; then
     exit 1
 fi
 
-for env in "${ENVIRONMENTS[@]}"; do
-    if [[ "${SP_OBJECT_IDS[$env]}" == your-*-sp-object-id ]]; then
-        echo "Error: SP_OBJECT_IDS[$env] is still set to the placeholder value. Edit the script first." >&2
+if [[ "$USE_MI" == true ]]; then
+    if [[ "$MI_RESOURCE_GROUP" == "your-infra-rg" ]]; then
+        echo "Error: MI_RESOURCE_GROUP is still set to the placeholder value. Edit the script first." >&2
         exit 1
     fi
-done
+    for env in "${ENVIRONMENTS[@]}"; do
+        if [[ "${MI_NAMES[$env]}" == "" ]]; then
+            echo "Error: MI_NAMES[$env] is not set. Edit the script first." >&2
+            exit 1
+        fi
+    done
+    echo "Mode: Managed Identity"
+else
+    for env in "${ENVIRONMENTS[@]}"; do
+        if [[ "${SP_OBJECT_IDS[$env]}" == your-*-sp-object-id ]]; then
+            echo "Error: SP_OBJECT_IDS[$env] is still set to the placeholder value. Edit the script first." >&2
+            exit 1
+        fi
+    done
+    echo "Mode: Service Principal"
+fi
 
 if [[ "$DYNAMIC" == true ]]; then
     if ! command -v gh >/dev/null 2>&1; then
@@ -97,19 +124,30 @@ for repo in "${REPOS[@]}"; do
 
         SUBJECT="repo:${ORG_NAME}/${repo}:environment:${env}"
         DISPLAY_NAME="${repo}-${env}"
-        SP_OBJECT_ID="${SP_OBJECT_IDS[$env]}"
 
         echo "Creating credential: $DISPLAY_NAME"
 
-        OUTPUT=$(az ad app federated-credential create \
-            --id "$SP_OBJECT_ID" \
-            --parameters "{
-                \"name\": \"${DISPLAY_NAME}\",
-                \"issuer\": \"https://token.actions.githubusercontent.com\",
-                \"subject\": \"${SUBJECT}\",
-                \"audiences\": [\"api://AzureADTokenExchange\"],
-                \"description\": \"GitHub Actions for ${repo} ${env} environment\"
-            }" 2>&1) && RC=0 || RC=$?
+        if [[ "$USE_MI" == true ]]; then
+            OUTPUT=$(az identity federated-credential create \
+                --identity-name "${MI_NAMES[$env]}" \
+                --resource-group "$MI_RESOURCE_GROUP" \
+                --name "$DISPLAY_NAME" \
+                --issuer "https://token.actions.githubusercontent.com" \
+                --subject "$SUBJECT" \
+                --audiences "api://AzureADTokenExchange" \
+                2>&1) && RC=0 || RC=$?
+        else
+            SP_OBJECT_ID="${SP_OBJECT_IDS[$env]}"
+            OUTPUT=$(az ad app federated-credential create \
+                --id "$SP_OBJECT_ID" \
+                --parameters "{
+                    \"name\": \"${DISPLAY_NAME}\",
+                    \"issuer\": \"https://token.actions.githubusercontent.com\",
+                    \"subject\": \"${SUBJECT}\",
+                    \"audiences\": [\"api://AzureADTokenExchange\"],
+                    \"description\": \"GitHub Actions for ${repo} ${env} environment\"
+                }" 2>&1) && RC=0 || RC=$?
+        fi
 
         if [[ $RC -eq 0 ]]; then
             CREATED=$((CREATED + 1))

@@ -4,7 +4,25 @@ Full step-by-step instructions for configuring Azure federated credentials with 
 
 > **Prerequisites** — Make sure you've reviewed the [prerequisites](README.md#prerequisites) before starting.
 
-## Step 1: Create Service Principals
+## Choose Your Identity Type
+
+This repo supports two Azure identity types. Choose one:
+
+| | Service Principal | User-Assigned Managed Identity |
+|---|---|---|
+| **Azure AD admin required** | Yes (`Application.ReadWrite.All`) | No — just `Contributor` on the resource group |
+| **Client secrets can exist** | Yes (even if unused with OIDC) | No — secrets physically cannot be created |
+| **IaC support** | Requires AzureAD Terraform provider | First-class Azure resource (Terraform/Bicep/ARM) |
+| **Cleanup** | Can become orphaned in Azure AD | Deleting the resource cleans up everything |
+| **Script flag** | (default) | `--managed-identity` |
+
+Both approaches use the same GitHub Actions workflow — `azure/login@v2` with `client-id`, `tenant-id`, and `subscription-id`.
+
+---
+
+## Step 1: Create Identities
+
+### Option A: Service Principal (default)
 
 Create a Service Principal for each environment:
 
@@ -33,25 +51,49 @@ az role assignment create --assignee <sp-client-id> \
   --scope /subscriptions/{subscription-id}/resourceGroups/{another-rg-name}
 ```
 
-> **Why resource-group scoping?** Federated credentials already prevent unauthorized repos/environments from authenticating. Resource-group scoping adds defense in depth — it limits the blast radius if an authorized workflow is ever compromised. For dev/staging environments where risk is lower, subscription-level scoping (`--scopes /subscriptions/{subscription-id}`) is also acceptable.
-
-> **Note:** When adding a new application in a new resource group, you must manually grant the corresponding SP access to that resource group using `az role assignment create` (shown above). The `setup_creds.sh` script only creates federated credentials — it does not manage Azure RBAC role assignments.
-
-**Important:** Save the output from each command. You'll need:
-- `appId` (Client ID) — for GitHub secrets
-- `appId` — to get the Object ID in the next step
-
-## Step 2: Get Service Principal Object IDs
-
-For each Service Principal, get the Object ID (not the Client ID):
+Then get the **Object ID** (not Client ID) for each SP:
 
 ```bash
-az ad sp show --id <appId-from-previous-step> --query id -o tsv
+az ad sp show --id <appId> --query id -o tsv
 ```
 
-Run this command for each environment's Service Principal and note the Object IDs.
+### Option B: User-Assigned Managed Identity
 
-## Step 3: Configure the Script
+Create a Managed Identity for each environment in a shared resource group:
+
+```bash
+# Create the resource group for identities (if it doesn't exist)
+az group create --name infra-rg --location eastus
+
+# Create managed identities
+az identity create --name "github-actions-dev" --resource-group infra-rg
+az identity create --name "github-actions-staging" --resource-group infra-rg
+az identity create --name "github-actions-prod" --resource-group infra-rg
+```
+
+Note the `clientId` from each output — you'll need it for GitHub secrets.
+
+Grant each identity access to the resource groups it needs:
+
+```bash
+# Get the identity's principal ID
+PRINCIPAL_ID=$(az identity show --name "github-actions-dev" --resource-group infra-rg --query principalId -o tsv)
+
+# Assign role
+az role assignment create --assignee "$PRINCIPAL_ID" \
+  --role contributor \
+  --scope /subscriptions/{subscription-id}/resourceGroups/{dev-rg-name}
+```
+
+Repeat for each identity and resource group.
+
+### Scoping guidance
+
+> **Why resource-group scoping?** Federated credentials already prevent unauthorized repos/environments from authenticating. Resource-group scoping adds defense in depth — it limits the blast radius if an authorized workflow is ever compromised. For dev/staging environments where risk is lower, subscription-level scoping is also acceptable.
+
+> **Note:** When adding a new application in a new resource group, you must manually grant the identity access to that resource group. The `setup_creds.sh` script only creates federated credentials — it does not manage Azure RBAC role assignments.
+
+## Step 2: Configure the Script
 
 Edit the variables at the top of `setup_creds.sh` (and `create_repo_env.sh` if you plan to use it).
 
@@ -69,7 +111,7 @@ ENVIRONMENTS=("dev" "staging" "production")
 ```
 Define the environments you want to create credentials for. You can add or remove environments as needed.
 
-### Service Principal Object IDs
+### If using Service Principal (default)
 
 ```bash
 declare -A SP_OBJECT_IDS
@@ -83,6 +125,19 @@ Get the Object IDs for your Service Principals:
 az ad sp show --id <client-id> --query id -o tsv
 ```
 
+### If using Managed Identity (`--managed-identity`)
+
+```bash
+MI_RESOURCE_GROUP="infra-rg"
+
+declare -A MI_NAMES
+MI_NAMES["dev"]="github-actions-dev"
+MI_NAMES["staging"]="github-actions-staging"
+MI_NAMES["production"]="github-actions-prod"
+```
+
+Set the resource group where your managed identities live and their names per environment.
+
 ### Repository List (manual mode only)
 
 ```bash
@@ -95,22 +150,34 @@ REPOS=(
 ```
 Add all repository names (without the org prefix) that you want to configure. This list is ignored when using `--dynamic`.
 
-## Step 4: Run the Script
+## Step 3: Run the Script
 
 ```bash
 chmod +x setup_creds.sh
 ```
 
-**Manual mode** — create credentials for the repos listed in the `REPOS` array:
+**Service Principal + manual repo list** (default):
 
 ```bash
 ./setup_creds.sh
 ```
 
-**Dynamic mode** — automatically fetch and process **all** repos in your GitHub org (requires `gh` CLI):
+**Service Principal + dynamic repo discovery** (requires `gh` CLI):
 
 ```bash
 ./setup_creds.sh --dynamic
+```
+
+**Managed Identity + manual repo list**:
+
+```bash
+./setup_creds.sh --managed-identity
+```
+
+**Managed Identity + dynamic repo discovery**:
+
+```bash
+./setup_creds.sh --managed-identity --dynamic
 ```
 
 ### What the Script Does
@@ -131,7 +198,7 @@ The script provides real-time feedback:
 - ✗ Failed with error details
 - Final summary with created / skipped / failed counts
 
-## Step 5: Create GitHub Environments
+## Step 4: Create GitHub Environments
 
 In each repository, create the environments:
 - Go to repository **Settings** → **Environments**
@@ -147,19 +214,28 @@ chmod +x create_repo_env.sh
 
 This script requires `gh` CLI. It also adds protection rules (reviewer requirement) for the `production` environment — set `PROD_REVIEWER_USER_ID` in the script to your GitHub numeric user ID (find it with `gh api /user --jq '.id'`). If left empty, production protection rules are skipped with a warning.
 
-## Step 6: Add GitHub Secrets
+## Step 5: Add GitHub Secrets
 
 Add the following secrets at the **organization level** or **repository level**:
 
 ```
-AZURE_CLIENT_ID_DEV=<dev-sp-client-id>
-AZURE_CLIENT_ID_STAGING=<staging-sp-client-id>
-AZURE_CLIENT_ID_PROD=<prod-sp-client-id>
 AZURE_TENANT_ID=<your-tenant-id>
 AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+
+# If using Service Principal — use the appId from az ad sp create-for-rbac output
+AZURE_CLIENT_ID_DEV=<dev-sp-appId>
+AZURE_CLIENT_ID_STAGING=<staging-sp-appId>
+AZURE_CLIENT_ID_PROD=<prod-sp-appId>
+
+# If using Managed Identity — use the clientId from az identity create output
+AZURE_CLIENT_ID_DEV=<dev-mi-clientId>
+AZURE_CLIENT_ID_STAGING=<staging-mi-clientId>
+AZURE_CLIENT_ID_PROD=<prod-mi-clientId>
 ```
 
-## Step 7: Use in GitHub Actions Workflow
+> **Tip:** To retrieve the `clientId` for a Managed Identity: `az identity show --name <name> --resource-group <rg> --query clientId -o tsv`
+
+## Step 6: Use in GitHub Actions Workflow
 
 A complete workflow template is provided in `workflow_template.yml`. It includes:
 - Push-triggered deploys to dev
