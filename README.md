@@ -1,8 +1,24 @@
 # Azure Federated Credentials Automation
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoftazure&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![Shell Script](https://img.shields.io/badge/Shell_Script-4EAA25?logo=gnubash&logoColor=white)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/pkumar26/federated-credentials-automation/pulls)
+
+[![GitHub Stars](https://img.shields.io/github/stars/pkumar26/federated-credentials-automation?style=social)](https://github.com/pkumar26/federated-credentials-automation/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/pkumar26/federated-credentials-automation?style=social)](https://github.com/pkumar26/federated-credentials-automation/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/pkumar26/federated-credentials-automation)](https://github.com/pkumar26/federated-credentials-automation/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/pkumar26/federated-credentials-automation)](https://github.com/pkumar26/federated-credentials-automation/commits/main)
+![Repo Size](https://img.shields.io/github/repo-size/pkumar26/federated-credentials-automation)
+
 This repository provides a set of scripts and templates to automate the creation of Azure AD federated credentials for GitHub Actions workflows across multiple repositories and environments.
 
 ## Overview
+
+![Azure AD](https://img.shields.io/badge/Azure_AD-0078D4?logo=microsoftazure&logoColor=white)
+![OIDC](https://img.shields.io/badge/OIDC-OpenID_Connect-orange?logo=openid&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 
 The scripts create federated credentials that allow GitHub Actions to authenticate with Azure using OpenID Connect (OIDC), eliminating the need for storing Azure secrets in GitHub.
 
@@ -26,6 +42,9 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 
 ## Prerequisites
 
+![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
+![GitHub CLI](https://img.shields.io/badge/GitHub_CLI-181717?logo=github&logoColor=white)
+
 - Azure CLI (`az`) installed and authenticated
 - GitHub CLI (`gh`) installed and authenticated — required by `setup_creds.sh --dynamic` and `create_repo_env.sh`
 - Appropriate permissions to create Service Principals or Managed Identities and federated credentials in Azure
@@ -33,6 +52,9 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 - Azure subscription ID
 
 ## Quick Start
+
+![Shell Script](https://img.shields.io/badge/Shell_Script-4EAA25?logo=gnubash&logoColor=white)
+![Bash](https://img.shields.io/badge/Bash-4.0%2B-4EAA25?logo=gnubash&logoColor=white)
 
 The script supports two Azure identity types — **Service Principal** (default) and **User-Assigned Managed Identity** (`--managed-identity`). See the [Setup Guide](SETUP.md) for help choosing.
 

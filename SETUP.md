@@ -1,5 +1,9 @@
 # Setup Guide
 
+![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoftazure&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![Shell Script](https://img.shields.io/badge/Shell_Script-4EAA25?logo=gnubash&logoColor=white)
+
 Full step-by-step instructions for configuring Azure federated credentials with GitHub Actions.
 
 > **Prerequisites** — Make sure you've reviewed the [prerequisites](README.md#prerequisites) before starting.
@@ -21,6 +25,8 @@ Both approaches use the same GitHub Actions workflow — `azure/login@v2` with `
 ---
 
 ## Step 1: Create Identities
+
+![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
 
 ### Option A: Service Principal (default)
 
@@ -95,6 +101,8 @@ Repeat for each identity and resource group.
 
 ## Step 2: Configure the Script
 
+![Shell Script](https://img.shields.io/badge/Shell_Script-4EAA25?logo=gnubash&logoColor=white)
+
 Edit the variables at the top of `setup_creds.sh` (and `create_repo_env.sh` if you plan to use it).
 
 ### Organization Name
@@ -152,6 +160,8 @@ Add all repository names (without the org prefix) that you want to configure. Th
 
 ## Step 3: Run the Script
 
+![Bash](https://img.shields.io/badge/Bash-4.0%2B-4EAA25?logo=gnubash&logoColor=white)
+
 ```bash
 chmod +x setup_creds.sh
 ```
@@ -181,6 +191,8 @@ chmod +x setup_creds.sh
 ```
 
 ### What the Script Does
+
+![OIDC](https://img.shields.io/badge/OIDC-OpenID_Connect-orange?logo=openid&logoColor=white)
 
 1. Iterates through each repository (from the hardcoded list or fetched dynamically)
 2. For each repository, creates federated credentials for each environment

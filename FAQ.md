@@ -1,8 +1,14 @@
 # FAQ & Troubleshooting
 
+![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoftazure&logoColor=white)
+![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)
+
 Common questions, troubleshooting tips, and operational guides.
 
 ## Troubleshooting
+
+![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
+![GitHub CLI](https://img.shields.io/badge/GitHub_CLI-181717?logo=github&logoColor=white)
 
 ### Credential Already Exists
 
@@ -31,6 +37,8 @@ gh auth status
 
 ## Security Best Practices
 
+![Security](https://img.shields.io/badge/Security-Best_Practices-critical?logo=shieldsdotio&logoColor=white)
+
 1. **Use separate identities per environment** — one Service Principal or Managed Identity per environment (dev, staging, production)
 2. **Apply least-privilege access** — grant only necessary permissions
 3. **Scope identities to resource groups** rather than the full subscription (see [SETUP.md — Step 1](SETUP.md#step-1-create-identities))
@@ -41,6 +49,9 @@ gh auth status
 ---
 
 ## Adding a New Repository
+
+![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
+![Shell Script](https://img.shields.io/badge/Shell_Script-4EAA25?logo=gnubash&logoColor=white)
 
 1. Add the repo name to the `REPOS` array in `setup_creds.sh` and re-run the script — existing credentials are automatically skipped:
    ```bash
@@ -68,6 +79,8 @@ gh auth status
 ---
 
 ## Removing a Repository
+
+![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
 
 When decommissioning a repo, clean up its federated credentials:
 
