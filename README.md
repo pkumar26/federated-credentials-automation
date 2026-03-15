@@ -37,6 +37,7 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 | `setup_creds.sh` | Creates federated credentials — supports both **Service Principals** and **User-Assigned Managed Identities**. Uses a hardcoded repo list by default, or pass `--dynamic` to fetch all repos from a GitHub org via `gh` CLI |
 | `create_repo_env.sh` | Creates GitHub environments (dev, staging, production) in each repo (requires `gh` CLI) |
 | `workflow_template.yml` | Ready-to-use GitHub Actions workflow template with `workflow_dispatch` and environment-to-credential mapping |
+| `notebooks/` | Interactive Jupyter notebooks — step-by-step alternative to shell scripts (see below) |
 | `SETUP.md` | Step-by-step setup guide |
 | `FAQ.md` | Troubleshooting, security best practices, adding/removing repositories |
 
@@ -75,6 +76,29 @@ chmod +x setup_creds.sh
 ```
 
 For the full walkthrough (creating Service Principals, configuring environments, setting up secrets, and deploying), see the **[Setup Guide](SETUP.md)**.
+
+## Interactive Notebooks
+
+![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB?logo=python&logoColor=white)
+![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)
+
+Prefer a guided, step-by-step experience? Use the interactive Jupyter notebooks in `notebooks/` — they run the same CLI commands as the shell scripts but let you execute cell-by-cell with inline output.
+
+| Notebook | Description |
+|----------|-------------|
+| **[01_create_identities](notebooks/01_create_identities.ipynb)** | Create Service Principals or Managed Identities, assign RBAC roles |
+| **[02_setup_credentials](notebooks/02_setup_credentials.ipynb)** | Create federated credentials for each repo × environment |
+| **[03_create_environments](notebooks/03_create_environments.ipynb)** | Create GitHub environments with optional production protection |
+| **[04_configure_secrets_and_workflow](notebooks/04_configure_secrets_and_workflow.ipynb)** | Set org-level GitHub secrets and deploy the workflow template |
+| **[05_verify_and_troubleshoot](notebooks/05_verify_and_troubleshoot.ipynb)** | Verify the setup, list credentials, troubleshoot issues |
+
+Run them in order — each notebook saves configuration to `config.json` so you only enter values once.
+
+```bash
+# Open in VS Code or JupyterLab
+cd notebooks/
+jupyter lab
+```
 
 ## Documentation
 
