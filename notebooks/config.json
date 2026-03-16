@@ -1,0 +1,23 @@
+{
+  "org_name": "pkumar26",
+  "subscription_id": "e9a0f2f0-f146-411a-825b-41913496dfc1",
+  "environments": [
+    "dev"
+  ],
+  "resource_groups": {
+    "dev": "rg-demoapp-dev"
+  },
+  "identity_type": "mi",
+  "identities": {
+    "dev": {
+      "name": "github-actions-dev",
+      "client_id": "69cee289-dfea-484d-977b-c6d1b5cbe6a0",
+      "principal_id": "c10da0ac-fbda-487a-bd61-3ac581a0e157"
+    }
+  },
+  "mi_resource_group": "rg-core",
+  "tenant_id": "cc4fb710-2bb6-4c47-ace3-a3c85b8fdf4c",
+  "repos": [
+    "federated-credentials-automation"
+  ]
+}
