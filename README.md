@@ -79,7 +79,7 @@ For the full walkthrough (creating Service Principals, configuring environments,
 
 ## Interactive Notebooks
 
-![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
 ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)
 
 Prefer a guided, step-by-step experience? Use the interactive Jupyter notebooks in `notebooks/` — they run the same CLI commands as the shell scripts but let you execute cell-by-cell with inline output.
@@ -93,6 +93,8 @@ Prefer a guided, step-by-step experience? Use the interactive Jupyter notebooks 
 | **[05_verify_and_troubleshoot](notebooks/05_verify_and_troubleshoot.ipynb)** | Verify the setup, list credentials, troubleshoot issues |
 
 Run them in order — each notebook saves configuration to `config.json` so you only enter values once.
+
+> **Getting started:** Copy `notebooks/config.json.example` to `notebooks/config.json` and fill in your values, or let notebook 01 create it for you.
 
 > **Note:** The `config.json` file uses `org_name` as its key for the GitHub owner — this applies to both organization names and personal usernames.
 

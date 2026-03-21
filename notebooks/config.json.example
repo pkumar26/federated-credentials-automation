@@ -1,0 +1,15 @@
+{
+  "org_name": "your-org-or-username",
+  "subscription_id": "00000000-0000-0000-0000-000000000000",
+  "environments": [
+    "dev",
+    "staging",
+    "production"
+  ],
+  "resource_groups": {
+    "dev": "your-dev-rg",
+    "staging": "your-staging-rg",
+    "production": "your-prod-rg"
+  },
+  "identity_type": "sp"
+}
