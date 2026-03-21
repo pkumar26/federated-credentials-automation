@@ -4,7 +4,9 @@ set -euo pipefail
 # ──────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────
-ORG_NAME="your-org-name"
+# GitHub owner — organization name OR personal username.
+# For personal accounts, set this to your GitHub username.
+GITHUB_OWNER="your-org-or-username"
 ENVIRONMENTS=("dev" "staging" "production")
 
 # ── Option A: Service Principal (default) ─────
@@ -58,8 +60,8 @@ if ! az account show >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ "$ORG_NAME" == "your-org-name" ]]; then
-    echo "Error: ORG_NAME is still set to the placeholder value. Edit the script first." >&2
+if [[ "$GITHUB_OWNER" == "your-org-or-username" ]]; then
+    echo "Error: GITHUB_OWNER is still set to the placeholder value. Edit the script first." >&2
     exit 1
 fi
 
@@ -100,10 +102,10 @@ fi
 # Build repo list
 # ──────────────────────────────────────────────
 if [[ "$DYNAMIC" == true ]]; then
-    echo "Fetching repositories from GitHub org: $ORG_NAME"
-    mapfile -t REPOS < <(gh repo list "$ORG_NAME" --limit 1000 --json name --jq '.[].name')
+    echo "Fetching repositories from GitHub: $GITHUB_OWNER"
+    mapfile -t REPOS < <(gh repo list "$GITHUB_OWNER" --limit 1000 --json name --jq '.[].name')
     if [[ ${#REPOS[@]} -eq 0 ]]; then
-        echo "Error: No repositories found for org '$ORG_NAME'." >&2
+        echo "Error: No repositories found for '$GITHUB_OWNER'." >&2
         exit 1
     fi
 fi
@@ -122,7 +124,7 @@ for repo in "${REPOS[@]}"; do
     for env in "${ENVIRONMENTS[@]}"; do
         TOTAL=$((TOTAL + 1))
 
-        SUBJECT="repo:${ORG_NAME}/${repo}:environment:${env}"
+        SUBJECT="repo:${GITHUB_OWNER}/${repo}:environment:${env}"
         DISPLAY_NAME="${repo}-${env}"
 
         echo "Creating credential: $DISPLAY_NAME"
@@ -172,5 +174,5 @@ echo "  Failed:          $FAILED"
 echo ""
 echo "Next steps:"
 echo "  1. Create GitHub environments (dev, staging, production) in each repo"
-echo "  2. Add organization secrets for AZURE_CLIENT_ID_* variables"
+echo "  2. Add GitHub secrets for AZURE_CLIENT_ID_* (org-level or repo-level)"
 echo "  3. Use the workflow template in your repositories"

@@ -105,12 +105,14 @@ Repeat for each identity and resource group.
 
 Edit the variables at the top of `setup_creds.sh` (and `create_repo_env.sh` if you plan to use it).
 
+> **Personal accounts:** Set `GITHUB_OWNER` to your GitHub username. Everything else works the same — the scripts and notebooks auto-detect whether you're using an organization or personal account.
+
 ### Organization Name
 
 ```bash
-ORG_NAME="your-org-name"
+GITHUB_OWNER="your-org-or-username"
 ```
-Replace with your GitHub organization name.
+Replace with your GitHub organization name or personal username.
 
 ### Environments
 
@@ -198,7 +200,7 @@ chmod +x setup_creds.sh
 2. For each repository, creates federated credentials for each environment
 3. Configures the credentials with:
    - **Issuer:** `https://token.actions.githubusercontent.com`
-   - **Subject:** `repo:<org>/<repo>:environment:<env>`
+   - **Subject:** `repo:<owner>/<repo>:environment:<env>`
    - **Audience:** `api://AzureADTokenExchange`
 4. Provides a summary of created credentials
 
@@ -216,19 +218,23 @@ In each repository, create the environments:
 - Go to repository **Settings** → **Environments**
 - Create: `dev`, `staging`, `production`
 
-**Automated option:** Use the provided `create_repo_env.sh` script to create environments across all repos in your org:
+**Automated option:** Use the provided `create_repo_env.sh` script to create environments across all repos:
+
+> **Prerequisite:** `create_repo_env.sh` requires the GitHub CLI (`gh`) to be installed and authenticated.
 
 ```bash
 chmod +x create_repo_env.sh
-# Edit ORG_NAME in the script, then run:
+# Edit GITHUB_OWNER in the script, then run:
 ./create_repo_env.sh
 ```
 
 This script requires `gh` CLI. It also adds protection rules (reviewer requirement) for the `production` environment — set `PROD_REVIEWER_USER_ID` in the script to your GitHub numeric user ID (find it with `gh api /user --jq '.id'`). If left empty, production protection rules are skipped with a warning.
 
+> **Note:** Environment protection rules (required reviewers, wait timers) require **GitHub Pro/Team/Enterprise** for private repos. On free personal accounts, environments are created successfully but protection rules are skipped.
+
 ## Step 5: Add GitHub Secrets
 
-Add the following secrets at the **organization level** or **repository level**:
+Add the following secrets at the **organization level** (org accounts) or **repository level** (personal accounts):
 
 ```
 AZURE_TENANT_ID=<your-tenant-id>
@@ -245,14 +251,21 @@ AZURE_CLIENT_ID_STAGING=<staging-mi-clientId>
 AZURE_CLIENT_ID_PROD=<prod-mi-clientId>
 ```
 
+**Organization accounts:** Set secrets at the org level with `gh secret set --org <org-name>` — all repos can access them.
+
+**Personal accounts:** Set secrets per repository with `gh secret set --repo <username>/<repo>` — or use the notebook which handles this automatically.
+
 > **Tip:** To retrieve the `clientId` for a Managed Identity: `az identity show --name <name> --resource-group <rg> --query clientId -o tsv`
 
 ## Step 6: Use in GitHub Actions Workflow
 
-A complete workflow template is provided in `workflow_template.yml`. It includes:
+A complete workflow template is provided in `workflow_template.yml`. It works the same for both Service Principals and Managed Identities — the workflow only references `client-id`, `tenant-id`, and `subscription-id`.
+
+The template includes:
 - Push-triggered deploys to dev
 - Manual `workflow_dispatch` with environment selection
 - Automatic mapping of environment to the correct client ID secret
+- Required `permissions: id-token: write` for OIDC token generation
 
 Copy it into your repositories:
 

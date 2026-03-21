@@ -28,13 +28,13 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 - **No manual maintenance:** Adding a new repo = run script once
 - **Centralized control:** Manage 3 identities (Service Principals or Managed Identities) instead of hundreds
 - **GitHub environments provide security:** Protection rules, approvals, deployment gates
-- **Org-level secrets:** No need to configure secrets per repo
+- **Org-level or repo-level secrets:** Organization accounts use shared org secrets; personal accounts set secrets per repo
 
 ## Repository Structure
 
 | File | Description |
 |------|-------------|
-| `setup_creds.sh` | Creates federated credentials — supports both **Service Principals** and **User-Assigned Managed Identities**. Uses a hardcoded repo list by default, or pass `--dynamic` to fetch all repos from a GitHub org via `gh` CLI |
+| `setup_creds.sh` | Creates federated credentials — supports both **Service Principals** and **User-Assigned Managed Identities**. Uses a hardcoded repo list by default, or pass `--dynamic` to fetch all repos from GitHub via `gh` CLI |
 | `create_repo_env.sh` | Creates GitHub environments (dev, staging, production) in each repo (requires `gh` CLI) |
 | `workflow_template.yml` | Ready-to-use GitHub Actions workflow template with `workflow_dispatch` and environment-to-credential mapping |
 | `notebooks/` | Interactive Jupyter notebooks — step-by-step alternative to shell scripts (see below) |
@@ -49,7 +49,7 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 - Azure CLI (`az`) installed and authenticated
 - GitHub CLI (`gh`) installed and authenticated — required by `setup_creds.sh --dynamic` and `create_repo_env.sh`
 - Appropriate permissions to create Service Principals or Managed Identities and federated credentials in Azure
-- GitHub organization with repositories
+- GitHub account (organization **or** personal) with repositories
 - Azure subscription ID
 
 ## Quick Start
@@ -60,7 +60,7 @@ The scripts create federated credentials that allow GitHub Actions to authentica
 The script supports two Azure identity types — **Service Principal** (default) and **User-Assigned Managed Identity** (`--managed-identity`). See the [Setup Guide](SETUP.md) for help choosing.
 
 ```bash
-# 1. Configure the script (edit ORG_NAME, SP_OBJECT_IDS or MI_NAMES, REPOS)
+# 1. Configure the script (edit GITHUB_OWNER, SP_OBJECT_IDS or MI_NAMES, REPOS)
 vim setup_creds.sh
 
 # 2. Run with Service Principal (default)
@@ -89,10 +89,12 @@ Prefer a guided, step-by-step experience? Use the interactive Jupyter notebooks 
 | **[01_create_identities](notebooks/01_create_identities.ipynb)** | Create Service Principals or Managed Identities, assign RBAC roles |
 | **[02_setup_credentials](notebooks/02_setup_credentials.ipynb)** | Create federated credentials for each repo × environment |
 | **[03_create_environments](notebooks/03_create_environments.ipynb)** | Create GitHub environments with optional production protection |
-| **[04_configure_secrets_and_workflow](notebooks/04_configure_secrets_and_workflow.ipynb)** | Set org-level GitHub secrets and deploy the workflow template |
+| **[04_configure_secrets_and_workflow](notebooks/04_configure_secrets_and_workflow.ipynb)** | Set GitHub secrets (org-level or repo-level) and deploy the workflow template |
 | **[05_verify_and_troubleshoot](notebooks/05_verify_and_troubleshoot.ipynb)** | Verify the setup, list credentials, troubleshoot issues |
 
 Run them in order — each notebook saves configuration to `config.json` so you only enter values once.
+
+> **Note:** The `config.json` file uses `org_name` as its key for the GitHub owner — this applies to both organization names and personal usernames.
 
 ```bash
 # Open in VS Code or JupyterLab
@@ -106,6 +108,27 @@ jupyter lab
 |----------|----------|
 | **[Setup Guide](SETUP.md)** | Choose identity type (SP vs Managed Identity), create identities, configure scripts, set up GitHub environments and secrets, deploy |
 | **[FAQ & Troubleshooting](FAQ.md)** | Troubleshooting, security best practices, adding/removing repositories |
+
+## Personal Accounts vs Organizations
+
+![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)
+
+This project works with both **GitHub organizations** and **personal accounts**.
+
+| Feature | Organization | Personal Account |
+|---------|-------------|------------------|
+| Federated credentials (Azure) | ✓ | ✓ |
+| OIDC login in workflows | ✓ | ✓ |
+| GitHub secrets | Org-level (shared) | Repo-level (per repo) |
+| Environment creation | ✓ | ✓ (private repos) |
+| Environment protection rules | ✓ (Pro/Team/Enterprise) | Requires GitHub Pro |
+| Dynamic repo discovery | ✓ | ✓ |
+
+**Key differences for personal accounts:**
+- Set `GITHUB_OWNER` to your **GitHub username** (instead of an org name)
+- Secrets are set **per repository** instead of at the org level
+- Environment protection rules (required reviewers, wait timers) require **GitHub Pro** — on free accounts, environments are created but protection rules are skipped
+- The notebooks auto-detect your account type and adjust behavior accordingly
 
 ## License
 

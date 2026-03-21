@@ -4,7 +4,9 @@ set -euo pipefail
 # ──────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────
-ORG_NAME="your-org-name"
+# GitHub owner — organization name OR personal username.
+# For personal accounts, set this to your GitHub username.
+GITHUB_OWNER="your-org-or-username"
 ENVIRONMENTS=("dev" "staging" "production")
 
 # GitHub user ID for production environment reviewer.
@@ -24,18 +26,18 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ "$ORG_NAME" == "your-org-name" ]]; then
-    echo "Error: ORG_NAME is still set to the placeholder value. Edit the script first." >&2
+if [[ "$GITHUB_OWNER" == "your-org-or-username" ]]; then
+    echo "Error: GITHUB_OWNER is still set to the placeholder value. Edit the script first." >&2
     exit 1
 fi
 
 # ──────────────────────────────────────────────
 # Fetch repositories and create environments
 # ──────────────────────────────────────────────
-mapfile -t REPOS < <(gh repo list "$ORG_NAME" --limit 1000 --json name --jq '.[].name')
+mapfile -t REPOS < <(gh repo list "$GITHUB_OWNER" --limit 1000 --json name --jq '.[].name')
 
 if [[ ${#REPOS[@]} -eq 0 ]]; then
-    echo "Error: No repositories found for org '$ORG_NAME'." >&2
+    echo "Error: No repositories found for '$GITHUB_OWNER'." >&2
     exit 1
 fi
 
@@ -48,7 +50,7 @@ for repo in "${REPOS[@]}"; do
         OUTPUT=$(gh api \
             --method PUT \
             -H "Accept: application/vnd.github+json" \
-            "/repos/$ORG_NAME/$repo/environments/$env" \
+            "/repos/$GITHUB_OWNER/$repo/environments/$env" \
             -f "wait_timer=0" \
             2>&1) && RC=0 || RC=$?
 
@@ -67,7 +69,7 @@ for repo in "${REPOS[@]}"; do
                 PROT_OUTPUT=$(gh api \
                     --method PUT \
                     -H "Accept: application/vnd.github+json" \
-                    "/repos/$ORG_NAME/$repo/environments/production" \
+                    "/repos/$GITHUB_OWNER/$repo/environments/production" \
                     -f "prevent_self_review=true" \
                     -F "reviewers[][type]=User" \
                     -F "reviewers[][id]=$PROD_REVIEWER_USER_ID" \
@@ -76,7 +78,8 @@ for repo in "${REPOS[@]}"; do
                 if [[ $PROT_RC -eq 0 ]]; then
                     echo "  ✓ Added protection rules for production in $repo"
                 else
-                    echo "  ✗ Failed to add protection rules for production in $repo" >&2
+                    echo "  ⚠ Failed to add protection rules for production in $repo" >&2
+                    echo "    (Protection rules require GitHub Pro/Team/Enterprise for private repos)" >&2
                     echo "    $PROT_OUTPUT" >&2
                 fi
             fi

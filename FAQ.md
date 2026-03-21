@@ -10,9 +10,33 @@ Common questions, troubleshooting tips, and operational guides.
 ![Azure CLI](https://img.shields.io/badge/Azure_CLI-0078D4?logo=microsoftazure&logoColor=white)
 ![GitHub CLI](https://img.shields.io/badge/GitHub_CLI-181717?logo=github&logoColor=white)
 
+### Personal vs Organization Accounts
+
+This project supports both GitHub organizations and personal accounts.
+
+**Personal accounts — key differences:**
+- Set `GITHUB_OWNER` to your **GitHub username** (not an org name)
+- Secrets are set **per repository** instead of at the organization level
+- Environment protection rules (required reviewers, wait timers) require **GitHub Pro** for private repos — on free personal accounts, environments are created but protection rules are skipped
+- The notebooks auto-detect your account type and adjust behavior accordingly
+- `gh repo list <username>` works for discovering personal repos (same as for orgs)
+
+### Identity Already Exists
+
+If an Azure identity (Service Principal or Managed Identity) already exists when running notebook 01, the notebook detects it and reuses the existing identity instead of failing. You'll see:
+```
+⊘ SP 'github-actions-dev' already exists — reusing it.
+```
+or
+```
+⊘ Identity 'github-actions-dev' already exists — reusing it.
+```
+
+This is safe — the existing identity's client ID and object ID are captured for use by subsequent notebooks.
+
 ### Credential Already Exists
 
-If a credential already exists with the same name, the script will skip it and report it as "Skipped (already exists)".
+If a federated credential already exists with the same name, the script will skip it and report it as "Skipped (already exists)".
 
 ### Permission Errors
 
@@ -32,6 +56,15 @@ For GitHub CLI:
 ```bash
 gh auth status
 ```
+
+### Secret Not Found in GitHub Actions
+
+If your workflow fails with errors about missing secrets (e.g., `AZURE_CLIENT_ID_DEV` is empty):
+
+1. **Organization accounts:** Verify org-level secrets exist: `gh secret list --org <org-name>`
+2. **Personal accounts:** Verify repo-level secrets exist: `gh secret list --repo <username>/<repo>`
+3. **Common cause:** Secrets were set at the org level but you're using a personal account (or vice versa). The notebooks auto-detect account type, but if you ran `gh secret set --org` on a personal account, the command would have failed silently.
+4. **Fix:** Re-run notebook 04 or manually set secrets at the correct level.
 
 ---
 
